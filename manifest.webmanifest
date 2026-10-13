@@ -1,0 +1,21 @@
+{
+  "name": "Element Trail – Offline Monster-Abenteuer",
+  "short_name": "Element Trail",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#142338",
+  "theme_color": "#17283d",
+  "description": "Ein eigenständiges Monster-Abenteuer für unterwegs, ohne Sound.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

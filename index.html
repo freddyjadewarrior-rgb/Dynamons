@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#17283d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Element Trail">
+<title>Element Trail — Offline-Abenteuer</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#142338;--panel:#20344b;--panel2:#2e4863;--line:#5c7893;--text:#f3f6fb;--muted:#b9c9da;--gold:#ffe2a0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:manipulation}
+body{padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:900px;margin:auto}
+header{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;background:#101d2d;border-bottom:1px solid #38516b;min-height:48px}
+.logo{font-weight:900;letter-spacing:.06em;color:#ffe2a0;font-size:clamp(15px,4vw,21px)}
+.headerBtns{display:flex;gap:6px}
+button{font:inherit;color:var(--text);border:1px solid #718ba4;background:var(--panel2);border-radius:12px;padding:10px 12px;min-height:42px;font-weight:700;cursor:pointer}
+button:active{transform:scale(.98);filter:brightness(1.15)}
+button:disabled{opacity:.42}
+.smallbtn{font-size:13px;padding:7px 9px;min-height:34px}
+#main{position:relative;flex:1;min-height:0;display:flex;flex-direction:column}
+#canvasWrap{position:relative;flex:1;min-height:0;background:#4f9862;display:flex;align-items:center;justify-content:center;overflow:hidden}
+canvas{display:block;width:100%;height:100%;object-fit:contain;image-rendering:pixelated}
+#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);max-width:92%;padding:9px 13px;border:1px solid #e6cb88;border-radius:12px;background:#1b2a3bea;color:#ffe8ae;text-align:center;font-size:13px;pointer-events:none;opacity:0;transition:opacity .15s}
+#bottom{background:#101d2d;padding:8px 10px calc(8px + env(safe-area-inset-bottom));border-top:1px solid #38516b}
+.status{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:8px;margin-bottom:7px}
+.controls{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.dpad{display:grid;grid-template-columns:repeat(3,44px);grid-template-rows:repeat(2,40px);gap:4px}
+.dpad button{padding:0;font-size:21px;min-height:40px;border-radius:10px}
+.dpad .empty{visibility:hidden}
+.actionBtns{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px}
+.actionBtns button{min-height:40px;padding:8px 10px;font-size:13px}
+.overlay{position:absolute;inset:0;background:#0c1725eF;display:flex;align-items:center;justify-content:center;padding:16px;z-index:5}
+.panel{width:min(100%,560px);max-height:100%;overflow:auto;background:#20344b;border:1px solid #66809b;border-radius:20px;padding:18px;box-shadow:0 20px 60px #0008}
+h1{font-size:clamp(26px,7vw,40px);margin:0 0 8px;color:#ffe2a0}
+h2{font-size:22px;margin:0 0 10px}
+p{line-height:1.45;color:#d5e0eb}
+.row{display:flex;gap:9px;align-items:center}
+.row>*{min-width:0}
+.grow{flex:1}
+.card{background:#2b435b;border:1px solid #56728c;border-radius:14px;padding:10px;margin:8px 0}
+.monster{display:flex;align-items:center;gap:10px}
+.monster canvas{width:70px;height:70px;flex:none}
+.monsterInfo{flex:1}
+.muted{color:var(--muted);font-size:13px}
+.bar{height:10px;background:#121d2a;border-radius:99px;overflow:hidden;border:1px solid #71859a;margin:5px 0}
+.bar span{display:block;height:100%;background:#71d28a}
+.bar.red span{background:#ed7777}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.grid3 button,.grid2 button{font-size:12px;padding:9px 5px;min-height:53px}
+.wide{width:100%;margin-top:8px}
+#battleScene{position:relative;min-height:0;flex:1;background:linear-gradient(#80bddb 0 54%,#90c58b 54%);overflow:hidden}
+#battleScene:before{content:"";position:absolute;width:80vw;height:22vw;max-height:150px;left:-8%;bottom:22%;background:#75ae75;border-radius:50%}
+#battleScene:after{content:"";position:absolute;width:70vw;height:20vw;max-height:130px;right:-5%;bottom:18%;background:#68a66e;border-radius:50%}
+.battleCard{position:absolute;z-index:1;background:#f0f2e9;color:#263544;border:2px solid #5e7585;border-radius:14px;padding:8px 10px;width:48%;font-size:13px}
+.battleCard.enemy{top:10px;left:8px}.battleCard.player{right:8px;bottom:12px}
+.battleCard .bar{height:9px}
+.creatureSprite{position:absolute;z-index:1;width:34vw;max-width:170px;height:34vw;max-height:170px}
+.creatureSprite.enemy{top:22%;left:12%}.creatureSprite.player{right:12%;bottom:23%}
+#battleActions{padding:8px;background:#101d2d;border-top:1px solid #38516b}
+#battleLog{font-size:13px;color:#ffe2a0;min-height:28px;padding:3px 2px}
+.hidden{display:none!important}
+@media(min-width:650px){.dpad{grid-template-columns:repeat(3,50px);grid-template-rows:repeat(2,45px)}.dpad button{min-height:45px}.actionBtns button{font-size:14px}.creatureSprite{width:150px;height:150px}}
+@media(max-height:650px){header{min-height:40px;padding:5px 10px}#bottom{padding-top:5px}.dpad{grid-template-columns:repeat(3,38px);grid-template-rows:repeat(2,32px)}.dpad button{min-height:32px}.controls{gap:6px}.actionBtns button{min-height:34px;padding:5px 7px}.status{margin-bottom:4px}.battleCard{padding:6px 8px}}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div class="logo">✦ ELEMENT TRAIL</div><div class="headerBtns"><button class="smallbtn" id="teamBtn">Team</button><button class="smallbtn" id="saveBtn">Speichern</button></div></header>
+<div id="main">
+ <div id="canvasWrap"><canvas id="world"></canvas><div id="toast"></div></div>
+ <section id="battleView" class="hidden" style="display:flex;flex-direction:column;flex:1;min-height:0">
+  <div id="battleScene">
+   <canvas id="enemySprite" class="creatureSprite enemy" width="200" height="200"></canvas>
+   <canvas id="playerSprite" class="creatureSprite player" width="200" height="200"></canvas>
+   <div class="battleCard enemy" id="enemyCard"></div><div class="battleCard player" id="playerCard"></div>
+  </div>
+  <div id="battleActions"><div id="battleLog">Ein Gegner erscheint!</div><div id="moveButtons" class="grid3"></div><div id="extraButtons" class="grid2" style="margin-top:7px"></div></div>
+ </section>
+ <div id="overlay" class="overlay"><div class="panel" id="overlayPanel"></div></div>
+</div>
+<div id="bottom">
+ <div class="status"><span id="teamStatus">Team 2/6</span><span id="resourceStatus">Münzen 18 · Kugeln 5 · Tränke 3</span></div>
+ <div class="controls">
+  <div class="dpad">
+   <button class="empty">·</button><button data-move="0,-1">▲</button><button class="empty">·</button>
+   <button data-move="-1,0">◀</button><button data-move="0,1">▼</button><button data-move="1,0">▶</button>
+  </div>
+  <div class="actionBtns"><button id="interactBtn">Aktion</button><button id="mapBtn">Welt</button></div>
+ </div>
+</div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const COLORS={Feuer:"#f56f42",Wasser:"#4ca3eb",Natur:"#57be6f",Blitz:"#f5cd4a",Schatten:"#9775cd",Erde:"#ba8f5b"};
+const SPECIES=[
+ ["Glutfünkchen","Feuer","#f56842","Funkenstoß"],["Blattling","Natur","#4fb863","Rankenhieb"],["Plitschi","Wasser","#449de6","Blasenwurf"],
+ ["Voltkit","Blitz","#edc237","Knisterblitz"],["Felsknub","Erde","#a67f54","Steinramme"],["Dämmerling","Schatten","#8b69c2","Nebelwelle"],
+ ["Flammfuchs","Feuer","#ee7f39","Glutkugel"],["Moosmops","Natur","#5aad6a","Moosknall"],["Wellenwisp","Wasser","#45b1d4","Wasserbogen"],["Zapphorn","Blitz","#f2c83f","Donnerhüpfer"]
+];
+const BONUS={Feuer:{Natur:1.5,Wasser:.7},Wasser:{Feuer:1.5,Blitz:.7},Natur:{Wasser:1.5,Feuer:.7},Blitz:{Wasser:1.5,Erde:.7},Erde:{Blitz:1.5,Natur:.7},Schatten:{Schatten:1.2}};
+const state={player:[5,7],team:[],coins:18,potions:3,capsules:5,mode:"title",battle:null,message:"",toastTimer:0,trainers:[],map:[],lastMove:0};
+function creature(species=0,level=3){let s=SPECIES[species];return {species,name:s[0],element:s[1],color:s[2],attackName:s[3],level,maxHp:34+level*9+(species%3)*3,hp:34+level*9+(species%3)*3,power:7+level*2+species%4,xp:0,energy:8,moves:[{name:s[3],power:9+level*2,element:s[1],cost:0},{name:"Kraftschub",power:15+level*2,element:s[1],cost:3},{name:"Sternenfunke",power:20+level*2,element:s[1],cost:5}]}}
+function randomCreature(level=3){return creature(Math.floor(Math.random()*SPECIES.length),level)}
+function initMap(){let m=[];for(let y=0;y<15;y++){let row=[];for(let x=0;x<22;x++){let t=(x===0||y===0||x===21||y===14)?"tree":Math.random()<.10?"tree":Math.random()<.08?"water":Math.random()<.16?"grass":(x>=4&&x<=8||y>=5&&y<=9)?"path":"land";row.push(t)}m.push(row)}
+ for(let y=3;y<12;y++)for(let x=2;x<12;x++)if(x>=4&&x<=8||y>=5&&y<=9)m[y][x]="path";
+ [[5,7,"path"],[7,7,"healer"],[10,7,"trainer"],[16,5,"trainer"],[17,10,"shrine"],[12,7,"path"],[8,12,"path"]].forEach(([x,y,t])=>m[y][x]=t);return m}
+function toast(s){state.message=s;$("toast").textContent=s;$("toast").style.opacity=1;state.toastTimer=2600}
+function save(){try{localStorage.setItem("elementTrailSave",JSON.stringify({player:state.player,team:state.team,coins:state.coins,potions:state.potions,capsules:state.capsules,trainers:state.trainers}));toast("Spielstand auf diesem Gerät gespeichert.")}catch(e){toast("Speichern ist in diesem Browser nicht verfügbar.")}}
+function load(){try{let d=JSON.parse(localStorage.getItem("elementTrailSave"));if(!d)throw 0;Object.assign(state,d);state.mode="world";state.battle=null;hideOverlay();refresh();toast("Spielstand geladen.")}catch(e){toast("Kein Spielstand gefunden.")}}
+function newGame(){state.player=[5,7];state.team=[creature(0,3),creature(1,2)];state.coins=18;state.potions=3;state.capsules=5;state.trainers=[];state.map=initMap();state.mode="world";state.battle=null;hideOverlay();refresh();toast("Willkommen in der Elementwelt!")}
+function drawMonster(ctx,c,x,y,size,flip=1){ctx.save();ctx.translate(x,y);ctx.scale(flip,1);ctx.fillStyle="#25374755";ctx.beginPath();ctx.ellipse(0,size*.42,size*.47,size*.12,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=c.color;ctx.beginPath();ctx.ellipse(0,size*.12,size*.47,size*.37,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=lighten(c.color,30);ctx.beginPath();ctx.ellipse(-size*.08,size*.02,size*.26,size*.18,0,0,Math.PI*2);ctx.fill();
+ ctx.fillStyle=c.color;
+ if(c.species%3===0){ctx.beginPath();ctx.moveTo(-size*.28,-size*.08);ctx.lineTo(-size*.42,-size*.55);ctx.lineTo(-size*.02,-size*.28);ctx.fill();ctx.beginPath();ctx.moveTo(size*.20,-size*.1);ctx.lineTo(size*.43,-size*.48);ctx.lineTo(size*.40,-size*.05);ctx.fill()}
+ else if(c.species%3===1){ctx.beginPath();ctx.moveTo(-size*.18,-size*.12);ctx.lineTo(-size*.33,-size*.55);ctx.lineTo(size*.02,-size*.25);ctx.fill();ctx.beginPath();ctx.moveTo(size*.15,-size*.12);ctx.lineTo(size*.38,-size*.52);ctx.lineTo(size*.34,-size*.06);ctx.fill()}
+ else{ctx.beginPath();ctx.arc(-size*.28,-size*.16,size*.16,0,Math.PI*2);ctx.arc(size*.28,-size*.16,size*.16,0,Math.PI*2);ctx.fill()}
+ for(let ex of [-size*.2,size*.2]){ctx.fillStyle="#fffdf5";ctx.beginPath();ctx.arc(ex,size*.06,size*.09,0,Math.PI*2);ctx.fill();ctx.fillStyle="#263442";ctx.beginPath();ctx.arc(ex+size*.025,size*.06,size*.045,0,Math.PI*2);ctx.fill()}
+ ctx.strokeStyle="#493b43";ctx.lineWidth=Math.max(2,size*.025);ctx.beginPath();ctx.arc(0,size*.15,size*.15,.15,Math.PI-.15);ctx.stroke();
+ ctx.fillStyle=c.color;ctx.beginPath();ctx.ellipse(-size*.24,size*.42,size*.13,size*.08,0,0,Math.PI*2);ctx.ellipse(size*.22,size*.42,size*.13,size*.08,0,0,Math.PI*2);ctx.fill();ctx.restore()}
+function lighten(hex,a){let n=parseInt(hex.slice(1),16),r=Math.min(255,(n>>16)+a),g=Math.min(255,((n>>8)&255)+a),b=Math.min(255,(n&255)+a);return `rgb(${r},${g},${b})`}
+function setupCanvas(canvas){let rect=canvas.getBoundingClientRect(),dpr=Math.min(devicePixelRatio||1,2);canvas.width=Math.max(1,Math.round(rect.width*dpr));canvas.height=Math.max(1,Math.round(rect.height*dpr));let ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return {ctx,w:rect.width,h:rect.height}}
+function drawWorld(){let {ctx,w,h}=setupCanvas($("world"));if(!state.map.length)state.map=initMap();ctx.clearRect(0,0,w,h);let cols=Math.min(22,Math.ceil(w/35)),rows=Math.min(15,Math.ceil(h/35)),tile=Math.min(w/cols,h/rows,42),ox=state.player[0]-Math.floor(cols/2),oy=state.player[1]-Math.floor(rows/2);ox=Math.max(0,Math.min(22-cols,ox));oy=Math.max(0,Math.min(15-rows,oy));let sx=(w-cols*tile)/2,sy=(h-rows*tile)/2;
+ const tc={land:"#51975b",path:"#bea370",grass:"#3a854a",tree:"#245d3f",water:"#3787b7",healer:"#4b9b82",trainer:"#b7594c",shrine:"#8368b7"};
+ for(let vy=0;vy<rows;vy++)for(let vx=0;vx<cols;vx++){let x=ox+vx,y=oy+vy,t=state.map[y]?.[x]||"land",px=sx+vx*tile,py=sy+vy*tile;ctx.fillStyle=tc[t];ctx.fillRect(px,py,tile,tile);ctx.strokeStyle="#00000016";ctx.strokeRect(px,py,tile,tile);
+ if(t==="tree"){ctx.fillStyle="#1b4931";ctx.beginPath();ctx.arc(px+tile*.5,py+tile*.43,tile*.35,0,Math.PI*2);ctx.fill();ctx.fillStyle="#634830";ctx.fillRect(px+tile*.45,py+tile*.52,tile*.1,tile*.25)}
+ if(t==="grass"){ctx.strokeStyle="#a3d96f";ctx.lineWidth=2;for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(px+tile*(.25+i*.22),py+tile*.8);ctx.lineTo(px+tile*(.17+i*.22),py+tile*.48);ctx.stroke()}}
+ if(t==="water"){ctx.strokeStyle="#9bd6ef";ctx.beginPath();ctx.arc(px+tile*.5,py+tile*.55,tile*.24,0,Math.PI);ctx.stroke()}
+ if(t==="healer"){ctx.fillStyle="#edf6ef";ctx.beginPath();ctx.arc(px+tile/2,py+tile/2,tile*.28,0,Math.PI*2);ctx.fill();ctx.fillStyle="#3d9976";ctx.fillRect(px+tile*.44,py+tile*.28,tile*.12,tile*.44);ctx.fillRect(px+tile*.28,py+tile*.44,tile*.44,tile*.12)}
+ if(t==="trainer"){ctx.fillStyle="#f6d190";ctx.beginPath();ctx.arc(px+tile/2,py+tile*.35,tile*.18,0,Math.PI*2);ctx.fill();ctx.fillStyle="#743437";ctx.fillRect(px+tile*.32,py+tile*.48,tile*.36,tile*.36)}
+ if(t==="shrine"){ctx.fillStyle="#e0d0ff";ctx.beginPath();ctx.moveTo(px+tile/2,py+tile*.18);ctx.lineTo(px+tile*.82,py+tile/2);ctx.lineTo(px+tile/2,py+tile*.82);ctx.lineTo(px+tile*.18,py+tile/2);ctx.fill()}
+ }
+ let px=sx+(state.player[0]-ox+.5)*tile,py=sy+(state.player[1]-oy+.5)*tile;ctx.fillStyle="#fae0a5";ctx.beginPath();ctx.arc(px,py,tile*.29,0,Math.PI*2);ctx.fill();ctx.strokeStyle="#2e3c4b";ctx.lineWidth=2;ctx.stroke();ctx.fillStyle="#385676";ctx.beginPath();ctx.arc(px,py+tile*.1,tile*.15,0,Math.PI*2);ctx.fill();
+}
+function refresh(){ $("teamStatus").textContent=`Team: ${state.team.length}/6`; $("resourceStatus").textContent=`Münzen ${state.coins} · Kugeln ${state.capsules} · Tränke ${state.potions}`; if(state.mode==="world"){ $("battleView").classList.add("hidden");$("canvasWrap").classList.remove("hidden");drawWorld()} }
+function heal(){state.team.forEach(c=>c.hp=c.maxHp);toast("Dein Team wurde vollständig geheilt.");refresh()}
+function move(dx,dy){if(state.mode!=="world")return;let nx=state.player[0]+dx,ny=state.player[1]+dy;if(nx<1||ny<1||nx>20||ny>13)return;let t=state.map[ny][nx];if(t==="tree"||t==="water")return;state.player=[nx,ny];if(t==="grass"&&Math.random()<.22)startBattle(true);else if(t==="trainer")startBattle(false);else if(t==="healer")heal();else if(t==="shrine")toast("Der Sternenschrein stärkt deinen Mut.");drawWorld()}
+function interact(){if(state.mode!=="world")return;let [x,y]=state.player;for(let [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1]]){let t=state.map[y+dy]?.[x+dx];if(t==="healer"){heal();return}if(t==="trainer"){startBattle(false);return}if(t==="shrine"){toast("Sammle Kreaturen und trainiere für neue Herausforderungen.");return}}toast("Hier gibt es nichts Besonderes. Suche nach hohem Gras oder Trainern.")}
+function showOverlay(content){$("overlayPanel").innerHTML=content;$("overlay").classList.remove("hidden")}
+function hideOverlay(){$("overlay").classList.add("hidden")}
+function titleScreen(){$("canvasWrap").classList.remove("hidden");$("battleView").classList.add("hidden");showOverlay(`<h1>ELEMENT TRAIL</h1><p>Ein eigenständiges Offline-Abenteuer voller Element-Kreaturen.</p><div style="display:flex;justify-content:center;margin:10px"><canvas id="titleMonster" width="190" height="155" style="width:190px;height:155px"></canvas></div><button class="wide" id="newGame">Neues Spiel</button><button class="wide" id="loadGame">Spielstand laden</button><p class="muted">Eigene Grafiken · Ohne Sound · Kein Konto nötig</p>`);let c=$("titleMonster").getContext("2d");drawMonster(c,creature(0,3),95,80,105);$("newGame").onclick=newGame;$("loadGame").onclick=load}
+function teamScreen(fromBattle=false){let cards=state.team.map((c,i)=>`<div class="card monster"><canvas id="mc${i}" width="90" height="90"></canvas><div class="monsterInfo"><b>${i+1}. ${c.name}</b><div class="muted">${c.element} · Level ${c.level} · ${c.hp}/${c.maxHp} LP</div><div class="bar"><span style="width:${100*c.hp/c.maxHp}%"></span></div><button class="smallbtn" data-pick="${i}" ${c.hp<=0?"disabled":""}>${fromBattle?"Einsetzen":"Auswählen"}</button></div></div>`).join("");showOverlay(`<h2>Dein Team (${state.team.length}/6)</h2>${cards}<button class="wide" id="teamBack">Zurück</button>`);state.team.forEach((c,i)=>drawMonster($("mc"+i).getContext("2d"),c,45,44,42));document.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{let i=+b.dataset.pick;if(fromBattle){state.battle.active=i;state.battle.phase="choose";hideOverlay();showBattle()}else{toast(state.team[i].name+" ist bereit.");hideOverlay()}});$("teamBack").onclick=()=>{hideOverlay();if(fromBattle)showBattle()}}
+function startBattle(wild){if(!state.team.length)state.team=[creature(0,3)];if(state.team.every(c=>c.hp<=0))heal();let avg=state.team.reduce((a,c)=>a+c.level,0)/state.team.length;let e=randomCreature(Math.max(1,Math.round(avg)+[-1,0,0,1][Math.floor(Math.random()*4)]));state.battle={wild,enemy:e,active:Math.max(0,state.team.findIndex(c=>c.hp>0)),phase:"choose",log:wild?`Ein wildes ${e.name} erscheint!`:"Ein Trainer fordert dich heraus!",enemyTurn:false};state.mode="battle";$("canvasWrap").classList.add("hidden");$("battleView").classList.remove("hidden");hideOverlay();showBattle()}
+function active(){return state.team[state.battle.active]}
+function showBattle(){let b=state.battle;if(!b)return;let p=active(),e=b.enemy;$("enemyCard").innerHTML=`<b>${e.name} · Lv.${e.level}</b><div style="color:${e.color}">${e.element}</div><div class="bar red"><span style="width:${100*e.hp/e.maxHp}%"></span></div><small>${e.hp}/${e.maxHp} LP</small>`;$("playerCard").innerHTML=`<b>${p.name} · Lv.${p.level}</b><div style="color:${p.color}">${p.element}</div><div class="bar"><span style="width:${100*p.hp/p.maxHp}%"></span></div><small>${p.hp}/${p.maxHp} LP</small>`;drawMonster($("enemySprite").getContext("2d"),e,100,95,72,-1);drawMonster($("playerSprite").getContext("2d"),p,100,95,72,1);$("battleLog").textContent=b.log;
+ $("moveButtons").innerHTML="";p.moves.forEach((m,i)=>{let bt=document.createElement("button");bt.innerHTML=`${m.name}<br><small>Stärke ${m.power} · ${m.element}</small>`;bt.disabled=b.phase!=="choose"||(m.cost>p.energy);bt.onclick=()=>attack(i);$("moveButtons").append(bt)});
+ $("extraButtons").innerHTML="";let opts=[["Fangen",capture,b.wild],["Trank",usePotion,true],["Team",()=>teamScreen(true),true],["Fliehen",runAway,b.wild]];opts.forEach(([label,fn,ok])=>{let bt=document.createElement("button");bt.textContent=label;bt.disabled=((b.phase!=="choose" && !(label==="Team" && b.phase==="switch"))||!ok);bt.onclick=fn;$("extraButtons").append(bt)});if(["won","lost"].includes(b.phase)){let bt=document.createElement("button");bt.textContent="Weiter";bt.className="wide";bt.onclick=finishBattle;$("extraButtons").append(bt)}}
+function attack(idx){let b=state.battle,p=active(),e=b.enemy,m=p.moves[idx];if(b.phase!=="choose")return;if(m.cost>p.energy){toast("Nicht genug Energie.");return}p.energy-=m.cost;let mult=(BONUS[m.element]||{})[e.element]||1;let damage=Math.max(1,Math.floor((m.power+p.power*.6+Math.floor(Math.random()*8)-3)*mult));e.hp=Math.max(0,e.hp-damage);b.log=`${p.name} setzt ${m.name} ein! ${damage} Schaden.${mult>1?" Sehr effektiv!":""}`;b.phase="result";showBattle();setTimeout(()=>{if(state.mode!=="battle")return;if(e.hp<=0){p.xp+=12+e.level*3;if(p.xp>=p.level*20){p.xp-=p.level*20;p.level++;p.maxHp+=9;p.hp=p.maxHp;p.power+=2;p.moves.forEach(x=>x.power+=2);b.log+=` Levelaufstieg! ${p.name} ist jetzt Level ${p.level}.`}state.coins+=6+e.level;b.log+=` Sieg! +${6+e.level} Münzen.`;b.phase="won"}else{enemyAttack()}showBattle();refresh()},650)}
+function enemyAttack(){let b=state.battle,e=b.enemy,p=active();if(!p)return;let mult=(BONUS[e.element]||{})[p.element]||1;let d=Math.max(2,Math.floor((e.power+Math.floor(Math.random()*5)+1)*mult*.65));p.hp=Math.max(0,p.hp-d);b.log=`${e.name} greift an: ${d} Schaden.`;if(p.hp<=0){if(state.team.some(c=>c.hp>0))b.phase="switch";else b.phase="lost"}else b.phase="choose"}
+function capture(){let b=state.battle;if(!b.wild||state.capsules<=0){toast(state.capsules<=0?"Keine Fangkugeln mehr!":"Trainer-Kreaturen können nicht eingefangen werden.");return}state.capsules--;if(Math.random()<.28+.52*(1-b.enemy.hp/b.enemy.maxHp)){if(state.team.length<6)state.team.push(creature(b.enemy.species,b.enemy.level));b.log=state.team.length<=6?`${b.enemy.name} wurde eingefangen!`:"Gefangen, aber dein Team ist voll.";b.phase="won"}else{b.log=`${b.enemy.name} entkommt der Fangkugel!`;b.phase="result";setTimeout(()=>{if(state.mode==="battle"){enemyAttack();showBattle()}},600)}showBattle();refresh()}
+function usePotion(){let p=active(),b=state.battle;if(state.potions<=0){toast("Du hast keine Tränke.");return}if(p.hp===p.maxHp){toast("Diese Kreatur ist bereits fit.");return}state.potions--;p.hp=Math.min(p.maxHp,p.hp+35);b.log="Ein Trank stellt bis zu 35 LP wieder her.";b.phase="result";showBattle();setTimeout(()=>{if(state.mode==="battle"){enemyAttack();showBattle()}},600);refresh()}
+function runAway(){if(!state.battle.wild)return;state.mode="world";state.battle=null;$("battleView").classList.add("hidden");$("canvasWrap").classList.remove("hidden");toast("Du bist sicher entkommen.");refresh()}
+function finishBattle(){if(state.battle?.phase==="lost"){heal();toast("Dein Team wurde zur Raststätte gebracht.")}state.battle=null;state.mode="world";$("battleView").classList.add("hidden");$("canvasWrap").classList.remove("hidden");refresh()}
+$("teamBtn").onclick=()=>teamScreen(false);$("saveBtn").onclick=save;$("mapBtn").onclick=()=>{if(state.mode==="battle"){toast("Beende zuerst den Kampf.");return}if(state.mode==="title")return;hideOverlay();state.mode="world";$("canvasWrap").classList.remove("hidden");$("battleView").classList.add("hidden");refresh()};$("interactBtn").onclick=interact;
+document.querySelectorAll("[data-move]").forEach(b=>{let [dx,dy]=b.dataset.move.split(",").map(Number);b.addEventListener("pointerdown",e=>{e.preventDefault();move(dx,dy)})});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){if(!$("overlay").classList.contains("hidden"))hideOverlay();else if(state.mode==="battle")toast("Beende zuerst den Kampf.");else save()}else if(state.mode==="world"){let k=e.key.toLowerCase();if(k==="w"||k==="arrowup")move(0,-1);if(k==="s"||k==="arrowdown")move(0,1);if(k==="a"||k==="arrowleft")move(-1,0);if(k==="d"||k==="arrowright")move(1,0);if(k==="e")interact()}});
+let resizeTimer;window.addEventListener("resize",()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(state.mode==="world")drawWorld()},100)});
+function boot(){state.map=initMap();state.team=[creature(0,3),creature(1,2)];state.mode="title";titleScreen();refresh();setInterval(()=>{if(state.toastTimer>0){state.toastTimer-=200;if(state.toastTimer<=0)$("toast").style.opacity=0}},200)}
+boot();
+</script>
+</body>
+</html>
+
+<script>if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){navigator.serviceWorker.register("./service-worker.js").catch(()=>{});}</script>
